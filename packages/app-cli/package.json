@@ -65,7 +65,7 @@
     "tkwidgets": "^0.5.26",
     "url-parse": "^1.4.7",
     "word-wrap": "^1.2.3",
-    "yargs-parser": "^7.0.0"
+    "yargs-parser": "^13.1.2"
   },
   "devDependencies": {
     "@joplin/tools": "~2.6",
