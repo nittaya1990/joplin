@@ -1,8 +1,9 @@
 import { User } from '../../services/database/types';
 import { deleteApi, getApi, patchApi, postApi } from '../../utils/testing/apiUtils';
-import { beforeAllDb, afterAllTests, beforeEachDb, createUserAndSession, models } from '../../utils/testing/testUtils';
+import { beforeAllDb, afterAllTests, beforeEachDb, createUserAndSession, models, expectHttpError } from '../../utils/testing/testUtils';
+import { ErrorForbidden } from '../../utils/errors';
 
-describe('api_users', function() {
+describe('api/users', () => {
 
 	beforeAll(async () => {
 		await beforeAllDb('api_users');
@@ -16,7 +17,7 @@ describe('api_users', function() {
 		await beforeEachDb();
 	});
 
-	test('should create a user', async function() {
+	test('should create a user', async () => {
 		const { session: adminSession } = await createUserAndSession(1, true);
 
 		const userToSave: User = {
@@ -37,7 +38,7 @@ describe('api_users', function() {
 		expect(savedUser.must_set_password).toBe(1);
 	});
 
-	test('should patch a user', async function() {
+	test('should patch a user', async () => {
 		const { session: adminSession } = await createUserAndSession(1, true);
 		const { user } = await createUserAndSession(2);
 
@@ -49,7 +50,7 @@ describe('api_users', function() {
 		expect(savedUser.max_item_size).toBe(1000);
 	});
 
-	test('should get a user', async function() {
+	test('should get a user', async () => {
 		const { session: adminSession } = await createUserAndSession(1, true);
 		const { user } = await createUserAndSession(2);
 
@@ -59,7 +60,7 @@ describe('api_users', function() {
 		expect(fetchedUser.email).toBe(user.email);
 	});
 
-	test('should delete a user', async function() {
+	test('should delete a user', async () => {
 		const { session: adminSession } = await createUserAndSession(1, true);
 		const { user } = await createUserAndSession(2);
 
@@ -69,13 +70,38 @@ describe('api_users', function() {
 		expect(loadedUser).toBeFalsy();
 	});
 
-	test('should list users', async function() {
+	test('should list users', async () => {
 		const { session: adminSession } = await createUserAndSession(1, true);
 		await createUserAndSession(2);
 		await createUserAndSession(3);
 
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Old code before rule was applied
 		const results: any = await getApi(adminSession.id, 'users');
 		expect(results.items.length).toBe(3);
+	});
+
+	test('should not allow changing non-whitelisted properties', async () => {
+		const { session, user } = await createUserAndSession(1, false);
+		expect(user.is_admin).toBe(0);
+
+		await expectHttpError(async () => patchApi(session.id, `users/${user.id}`, {
+			is_admin: 1,
+		}), ErrorForbidden.httpCode);
+
+		const reloadedUser = await models().user().load(user.id);
+		expect(reloadedUser.is_admin).toBe(0);
+	});
+
+	test('should allow changing whitelisted properties', async () => {
+		const { session, user } = await createUserAndSession(1, false);
+		expect(user.is_admin).toBe(0);
+
+		await patchApi(session.id, `users/${user.id}`, {
+			full_name: 'New Name',
+		});
+
+		const reloadedUser = await models().user().load(user.id);
+		expect(reloadedUser.full_name).toBe('New Name');
 	});
 
 });

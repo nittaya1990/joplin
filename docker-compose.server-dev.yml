@@ -16,9 +16,9 @@ services:
             - POSTGRES_DATABASE=joplin
             - POSTGRES_USER=joplin
             - POSTGRES_PORT=5432
-            - POSTGRES_HOST=localhost
+            - POSTGRES_HOST=db
     db:
-        image: postgres:13.1
+        image: postgres:16
         ports:
             - "5432:5432"
         environment:
